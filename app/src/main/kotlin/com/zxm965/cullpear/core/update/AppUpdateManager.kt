@@ -24,13 +24,18 @@ sealed interface UpdateState {
     data object Idle : UpdateState
     data object Checking : UpdateState
     data class UpToDate(val version: String) : UpdateState
+    data class Available(val update: ReleaseUpdate) : UpdateState
     data class Downloading(val version: String) : UpdateState
     data class ReadyToInstall(val version: String) : UpdateState
     data class PermissionRequired(val version: String) : UpdateState
     data class Error(val message: String) : UpdateState
 }
 
-data class ReleaseUpdate(val version: String, val apkUrl: String)
+data class ReleaseUpdate(
+    val version: String,
+    val apkUrl: String,
+    val releaseNotes: String,
+)
 
 class AppUpdateManager(context: Context) {
     private val appContext = context.applicationContext
@@ -58,7 +63,7 @@ class AppUpdateManager(context: Context) {
         restoreDownloadState()
     }
 
-    suspend fun checkForUpdate(autoDownload: Boolean = true) {
+    suspend fun checkForUpdate() {
         state = UpdateState.Checking
         state = try {
             val update = fetchLatestRelease()
@@ -66,14 +71,21 @@ class AppUpdateManager(context: Context) {
                 UpdateState.UpToDate(BuildConfig.VERSION_NAME)
             } else if (restoreDownloadState(update.version)) {
                 state
-            } else if (autoDownload) {
-                enqueueDownload(update)
-                UpdateState.Downloading(update.version)
             } else {
-                UpdateState.ReadyToInstall(update.version)
+                UpdateState.Available(update)
             }
         } catch (error: Exception) {
             UpdateState.Error(error.message ?: "检查更新失败，请稍后重试。")
+        }
+    }
+
+    fun downloadAvailableUpdate() {
+        val update = (state as? UpdateState.Available)?.update ?: return
+        state = runCatching {
+            enqueueDownload(update)
+            UpdateState.Downloading(update.version)
+        }.getOrElse { error ->
+            UpdateState.Error(error.message ?: "无法开始下载更新。")
         }
     }
 
@@ -122,13 +134,22 @@ class AppUpdateManager(context: Context) {
             if (status !in 200..299) throw IllegalStateException("更新服务请求失败（$status）")
             val release = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
             val version = release.optString("tag_name").removePrefix("v")
+            val releaseNotes = formatReleaseNotes(release.optString("body"))
             val assets = release.optJSONArray("assets") ?: return@withContext null
             val apkUrl = (0 until assets.length())
                 .mapNotNull(assets::optJSONObject)
                 .firstOrNull { it.optString("name").endsWith(".apk", ignoreCase = true) }
                 ?.optString("browser_download_url")
                 .orEmpty()
-            if (version.isBlank() || apkUrl.isBlank()) null else ReleaseUpdate(version, apkUrl)
+            if (version.isBlank() || apkUrl.isBlank()) {
+                null
+            } else {
+                ReleaseUpdate(
+                    version = version,
+                    apkUrl = apkUrl,
+                    releaseNotes = releaseNotes,
+                )
+            }
         } finally {
             connection.disconnect()
         }
@@ -181,7 +202,7 @@ class AppUpdateManager(context: Context) {
 
     private fun handleCompletedDownload(id: Long) {
         if (id != savedDownloadId()) return
-        if (restoreDownloadState()) installDownloadedUpdate()
+        if (!restoreDownloadState()) state = UpdateState.Error("更新包下载失败，请重新检查更新。")
     }
 
     private fun savedDownloadId() = preferences.getLong(KEY_DOWNLOAD_ID, -1L)
@@ -203,6 +224,30 @@ class AppUpdateManager(context: Context) {
         private const val KEY_DOWNLOAD_ID = "download_id"
         private const val KEY_DOWNLOAD_VERSION = "download_version"
 
+        fun formatReleaseNotes(markdown: String): String {
+            val notes = markdown.lineSequence()
+                .map(String::trim)
+                .filter(String::isNotBlank)
+                .filterNot { line ->
+                    line.startsWith("**Full Changelog**", ignoreCase = true) ||
+                        line.startsWith("Full Changelog", ignoreCase = true)
+                }
+                .map { line ->
+                    line.removePrefix("### ")
+                        .removePrefix("## ")
+                        .removePrefix("# ")
+                        .removePrefix("* ")
+                        .removePrefix("- ")
+                        .replace(Regex("\\[([^]]+)]\\([^)]+\\)"), "$1")
+                        .replace("**", "")
+                        .trim()
+                }
+                .filter(String::isNotBlank)
+                .take(MAX_RELEASE_NOTE_LINES)
+                .joinToString("\n")
+            return notes.ifBlank { "修复已知问题并优化使用体验。" }
+        }
+
         fun compareVersions(left: String, right: String): Int {
             val leftParts = left.substringBefore('-').split('.').map { it.toIntOrNull() ?: 0 }
             val rightParts = right.substringBefore('-').split('.').map { it.toIntOrNull() ?: 0 }
@@ -213,5 +258,7 @@ class AppUpdateManager(context: Context) {
             }
             return 0
         }
+
+        private const val MAX_RELEASE_NOTE_LINES = 8
     }
 }

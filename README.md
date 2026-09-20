@@ -51,5 +51,5 @@ tests/
 
 - `master` 与 Pull Request 会通过 GitHub Actions 自动执行测试、Lint 和 Debug 构建。
 - 推送 `vX.Y.Z` 标签会自动构建签名 APK/AAB，并创建 GitHub Release。
-- 应用启动时会识别公开 GitHub Release 的新版本、自动下载 APK，并调起系统安装确认。
+- 应用启动时会识别公开 GitHub Release 的新版本，弹窗展示更新内容；用户确认后后台下载 APK，并在下载完成后提示安装。
 - 完整的密钥配置、版本规则和发布步骤见 [docs/RELEASING.md](docs/RELEASING.md)。

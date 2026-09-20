@@ -69,6 +69,9 @@ fun SettingsRoute(preferences: ThemePreferences, updateManager: AppUpdateManager
                 InfoRow("当前版本", BuildConfig.VERSION_NAME)
                 Text(updateStateLabel(updateManager.state), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 when (updateManager.state) {
+                    is UpdateState.Available -> {
+                        OutlinedButton(onClick = updateManager::downloadAvailableUpdate) { Text("下载更新") }
+                    }
                     is UpdateState.ReadyToInstall -> {
                         OutlinedButton(onClick = updateManager::installDownloadedUpdate) { Text("安装更新") }
                     }
@@ -77,7 +80,7 @@ fun SettingsRoute(preferences: ThemePreferences, updateManager: AppUpdateManager
                     }
                     is UpdateState.Checking, is UpdateState.Downloading -> Unit
                     else -> {
-                        OutlinedButton(onClick = { scope.launch { updateManager.checkForUpdate(autoDownload = true) } }) {
+                        OutlinedButton(onClick = { scope.launch { updateManager.checkForUpdate() } }) {
                             Text("检查更新")
                         }
                     }
@@ -91,7 +94,8 @@ private fun updateStateLabel(state: UpdateState): String = when (state) {
     UpdateState.Idle -> "启动后会自动检查更新。"
     UpdateState.Checking -> "正在检查更新…"
     is UpdateState.UpToDate -> "已是最新版本 ${state.version}。"
-    is UpdateState.Downloading -> "发现 ${state.version}，正在后台下载…"
+    is UpdateState.Available -> "发现新版本 ${state.update.version}。"
+    is UpdateState.Downloading -> "版本 ${state.version} 正在后台下载…"
     is UpdateState.ReadyToInstall -> "版本 ${state.version} 已下载，等待安装。"
     is UpdateState.PermissionRequired -> "需要允许本应用安装更新包。"
     is UpdateState.Error -> state.message

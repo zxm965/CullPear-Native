@@ -15,4 +15,15 @@ class AppUpdateManagerTest {
     fun ignoresPrereleaseSuffixForUpdateOrdering() {
         assertEquals(0, AppUpdateManager.compareVersions("2.0.0-beta.1", "2.0.0"))
     }
+
+    @Test
+    fun formatsGitHubReleaseNotesForDialog() {
+        val markdown = """
+            ## What's Changed
+            * [优化更新体验](https://example.com/change)
+            **Full Changelog**: https://example.com/compare
+        """.trimIndent()
+
+        assertEquals("What's Changed\n优化更新体验", AppUpdateManager.formatReleaseNotes(markdown))
+    }
 }
