@@ -38,8 +38,13 @@ jobs:
       - name: Install Android SDK 37
         shell: bash
         run: |
-          yes | sdkmanager --licenses >/dev/null || true
-          sdkmanager "platforms;android-37"
+          sdkmanager_path="$(find "$ANDROID_HOME/cmdline-tools" -path '*/bin/sdkmanager' -type f | sort -V | tail -1)"
+          if [[ -z "$sdkmanager_path" ]]; then
+            echo "sdkmanager was not found under ANDROID_HOME." >&2
+            exit 1
+          fi
+          yes | "$sdkmanager_path" --licenses >/dev/null || true
+          "$sdkmanager_path" "platforms;android-37"
 
       - name: Verify project
         run: ./gradlew --no-daemon testDebugUnitTest lintDebug assembleDebug
