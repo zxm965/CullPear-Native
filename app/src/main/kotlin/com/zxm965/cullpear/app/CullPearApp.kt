@@ -10,6 +10,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavDestination.Companion.hierarchy
@@ -54,6 +55,10 @@ fun CullPearApp(container: AppContainer) {
         route == "contact" -> "联系"
         route == "settings" -> "设置"
         else -> "拾梨"
+    }
+
+    LaunchedEffect(Unit) {
+        container.updateManager.checkForUpdate(autoDownload = true)
     }
 
     Scaffold(
@@ -113,7 +118,7 @@ fun CullPearApp(container: AppContainer) {
                 arguments = listOf(navArgument("slug") { type = NavType.StringType }),
             ) { BlogDetailRoute(container.repository, it.arguments?.getString("slug").orEmpty()) }
             composable("contact") { ContactRoute(container.repository) }
-            composable("settings") { SettingsRoute(container.themePreferences) }
+            composable("settings") { SettingsRoute(container.themePreferences, container.updateManager) }
         }
     }
 }

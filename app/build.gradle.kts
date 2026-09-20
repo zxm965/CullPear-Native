@@ -3,6 +3,14 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
+val releaseVersionName = providers.environmentVariable("VERSION_NAME").orNull
+    ?.takeIf { it.isNotBlank() } ?: "1.0.0"
+val releaseVersionCode = providers.environmentVariable("VERSION_CODE").orNull
+    ?.toIntOrNull()?.takeIf { it > 0 } ?: 1
+val apiBaseUrl = providers.environmentVariable("API_BASE_URL").orNull
+    ?.takeIf { it.isNotBlank() } ?: "https://cupear.i96.me/api/me"
+val releaseKeystorePath = providers.environmentVariable("ANDROID_KEYSTORE_PATH").orNull
+
 android {
     namespace = "com.zxm965.cullpear"
     compileSdk {
@@ -13,16 +21,28 @@ android {
         applicationId = "com.zxm965.cullpear"
         minSdk = 37
         targetSdk = 37
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = releaseVersionCode
+        versionName = releaseVersionName
 
+    }
+
+    signingConfigs {
+        if (!releaseKeystorePath.isNullOrBlank()) {
+            create("release") {
+                storeFile = file(releaseKeystorePath)
+                storePassword = providers.environmentVariable("ANDROID_KEYSTORE_PASSWORD").orNull
+                keyAlias = providers.environmentVariable("ANDROID_KEY_ALIAS").orNull
+                keyPassword = providers.environmentVariable("ANDROID_KEY_PASSWORD").orNull
+            }
+        }
     }
 
     buildTypes {
         release {
             optimization {
-                enable = false
+                enable = true
             }
+            signingConfig = signingConfigs.findByName("release")
         }
     }
     compileOptions {
@@ -34,11 +54,11 @@ android {
         buildConfig = true
     }
     defaultConfig {
-        buildConfigField("String", "API_BASE_URL", "\"https://cupear.i96.me/api/me\"")
+        buildConfigField("String", "API_BASE_URL", "\"${apiBaseUrl.replace("\"", "\\\"")}\"")
     }
     sourceSets {
         getByName("test") {
-            java.directories.add("../tests/unit")
+            kotlin.directories.add("../tests/unit")
         }
     }
 }

@@ -9,6 +9,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -17,13 +18,18 @@ import com.zxm965.cullpear.core.designsystem.theme.color
 import com.zxm965.cullpear.core.preferences.Accent
 import com.zxm965.cullpear.core.preferences.ThemeMode
 import com.zxm965.cullpear.core.preferences.ThemePreferences
+import com.zxm965.cullpear.BuildConfig
+import com.zxm965.cullpear.core.update.AppUpdateManager
+import com.zxm965.cullpear.core.update.UpdateState
 import com.zxm965.cullpear.ui.components.ContentCard
 import com.zxm965.cullpear.ui.components.ContentList
 import com.zxm965.cullpear.ui.components.InfoRow
 import com.zxm965.cullpear.ui.components.PageHeader
+import kotlinx.coroutines.launch
 
 @Composable
-fun SettingsRoute(preferences: ThemePreferences) {
+fun SettingsRoute(preferences: ThemePreferences, updateManager: AppUpdateManager) {
+    val scope = rememberCoroutineScope()
     ContentList {
         item { PageHeader("偏好", "设置") }
         item {
@@ -57,7 +63,38 @@ fun SettingsRoute(preferences: ThemePreferences) {
                 InfoRow("主题色", preferences.accent.name)
             }
         }
+        item {
+            Text("应用更新", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            ContentCard {
+                InfoRow("当前版本", BuildConfig.VERSION_NAME)
+                Text(updateStateLabel(updateManager.state), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                when (updateManager.state) {
+                    is UpdateState.ReadyToInstall -> {
+                        OutlinedButton(onClick = updateManager::installDownloadedUpdate) { Text("安装更新") }
+                    }
+                    is UpdateState.PermissionRequired -> {
+                        OutlinedButton(onClick = updateManager::installDownloadedUpdate) { Text("继续安装") }
+                    }
+                    is UpdateState.Checking, is UpdateState.Downloading -> Unit
+                    else -> {
+                        OutlinedButton(onClick = { scope.launch { updateManager.checkForUpdate(autoDownload = true) } }) {
+                            Text("检查更新")
+                        }
+                    }
+                }
+            }
+        }
     }
+}
+
+private fun updateStateLabel(state: UpdateState): String = when (state) {
+    UpdateState.Idle -> "启动后会自动检查更新。"
+    UpdateState.Checking -> "正在检查更新…"
+    is UpdateState.UpToDate -> "已是最新版本 ${state.version}。"
+    is UpdateState.Downloading -> "发现 ${state.version}，正在后台下载…"
+    is UpdateState.ReadyToInstall -> "版本 ${state.version} 已下载，等待安装。"
+    is UpdateState.PermissionRequired -> "需要允许本应用安装更新包。"
+    is UpdateState.Error -> state.message
 }
 
 @Composable
