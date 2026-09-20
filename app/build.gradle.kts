@@ -13,14 +13,12 @@ val releaseKeystorePath = providers.environmentVariable("ANDROID_KEYSTORE_PATH")
 
 android {
     namespace = "com.zxm965.cullpear"
-    compileSdk {
-        version = release(37)
-    }
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.zxm965.cullpear"
-        minSdk = 37
-        targetSdk = 37
+        minSdk = 26
+        targetSdk = 36
         versionCode = releaseVersionCode
         versionName = releaseVersionName
 
