@@ -7,8 +7,8 @@
     <group
         android:pivotX="512"
         android:pivotY="512"
-        android:scaleX="0.64"
-        android:scaleY="0.64">
+        android:scaleX="0.50"
+        android:scaleY="0.50">
         <path android:fillColor="#FFFFFFFF" android:pathData="M468.466,224.917l-6.187,15.567C383.948,209.45 344.233,152.572 344.233,71.347h16.964c0,74.44 35.424,125.131 107.27,153.57z" />
         <path android:fillColor="#FFFFFFFF" android:pathData="M297.219,80.999l100,-53.171 23.611,44.405 -100,53.171 -23.611,-44.405z" />
         <path android:fillColor="#FFFFFFFF" android:pathData="M383.449,174.824q-16.964,-95.694 52.288,-142.195T633.711,5.987q-29.936,126.029 -99.786,172.629t-150.477,-3.792z" />
