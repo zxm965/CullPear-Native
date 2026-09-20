@@ -85,4 +85,6 @@ GitHub Release 适合分发 APK；Google Play 应上传 AAB。首次发布时启
 
 应用每次启动会查询 `zxm965/CullPear-Native` 的最新 GitHub Release。发现更高版本后会使用 Android DownloadManager 自动下载 APK，并在下载完成后调起系统安装器。
 
+用于分发更新的 GitHub 仓库及其 Release 必须允许未登录访问。私有仓库的 Release API 和 APK 下载都需要身份凭证，不能把 GitHub Token 内置到 APK 中，否则任何人都可以从安装包提取 Token。若源代码需要保持私有，请改用单独的公开发行仓库，并同步调整 `AppUpdateManager` 中的 Release API 地址。
+
 Android 不允许普通应用静默安装，因此首次更新需要在系统页面允许“安装未知应用”，每次安装仍可能需要手动确认。第一次从 Debug 版本切换到 Release 版本时签名不同，需要先卸载 Debug 版；之后使用同一发布密钥即可直接覆盖更新。
