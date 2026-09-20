@@ -83,7 +83,7 @@ GitHub Release 适合分发 APK；Google Play 应上传 AAB。首次发布时启
 
 ## 应用内更新
 
-应用每次启动会查询 `zxm965/CullPear-Native` 的最新 GitHub Release。发现更高版本后会弹窗展示版本号和发行说明；用户确认后使用 Android DownloadManager 后台下载 APK，下载完成后再次弹窗提示安装。
+应用启动时会读取 `zxm965/CullPear-Native` 的公开 Release Atom 源，自动检查最多每 6 小时一次，设置页仍可手动强制检查。发现更高版本后会弹窗展示版本号和发行说明；用户确认后使用 Android DownloadManager 后台下载 APK，下载完成后再次弹窗提示安装。该方案不调用有匿名频率限制的 GitHub REST API。
 
 用于分发更新的 GitHub 仓库及其 Release 必须允许未登录访问。私有仓库的 Release API 和 APK 下载都需要身份凭证，不能把 GitHub Token 内置到 APK 中，否则任何人都可以从安装包提取 Token。若源代码需要保持私有，请改用单独的公开发行仓库，并同步调整 `AppUpdateManager` 中的 Release API 地址。
 

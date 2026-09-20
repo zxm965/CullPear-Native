@@ -80,7 +80,7 @@ fun SettingsRoute(preferences: ThemePreferences, updateManager: AppUpdateManager
                     }
                     is UpdateState.Checking, is UpdateState.Downloading -> Unit
                     else -> {
-                        OutlinedButton(onClick = { scope.launch { updateManager.checkForUpdate() } }) {
+                        OutlinedButton(onClick = { scope.launch { updateManager.checkForUpdate(force = true) } }) {
                             Text("检查更新")
                         }
                     }

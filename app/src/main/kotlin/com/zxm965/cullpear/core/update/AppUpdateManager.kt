@@ -16,7 +16,6 @@ import androidx.core.net.toUri
 import com.zxm965.cullpear.BuildConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 
@@ -63,10 +62,15 @@ class AppUpdateManager(context: Context) {
         restoreDownloadState()
     }
 
-    suspend fun checkForUpdate() {
+    suspend fun checkForUpdate(force: Boolean = false) {
+        if (!force && wasCheckedRecently()) {
+            if (!restoreDownloadState()) state = UpdateState.UpToDate(BuildConfig.VERSION_NAME)
+            return
+        }
         state = UpdateState.Checking
         state = try {
             val update = fetchLatestRelease()
+            preferences.edit { putLong(KEY_LAST_CHECKED_AT, System.currentTimeMillis()) }
             if (update == null || compareVersions(update.version, BuildConfig.VERSION_NAME) <= 0) {
                 UpdateState.UpToDate(BuildConfig.VERSION_NAME)
             } else if (restoreDownloadState(update.version)) {
@@ -124,32 +128,15 @@ class AppUpdateManager(context: Context) {
     }
 
     private suspend fun fetchLatestRelease(): ReleaseUpdate? = withContext(Dispatchers.IO) {
-        val connection = URL(LATEST_RELEASE_URL).openConnection() as HttpURLConnection
+        val connection = URL(RELEASES_FEED_URL).openConnection() as HttpURLConnection
         try {
             connection.connectTimeout = 15_000
             connection.readTimeout = 15_000
-            connection.setRequestProperty("Accept", "application/vnd.github+json")
+            connection.setRequestProperty("Accept", "application/atom+xml")
             connection.setRequestProperty("User-Agent", "CullPear-Android/${BuildConfig.VERSION_NAME}")
             val status = connection.responseCode
             if (status !in 200..299) throw IllegalStateException("更新服务请求失败（$status）")
-            val release = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
-            val version = release.optString("tag_name").removePrefix("v")
-            val releaseNotes = formatReleaseNotes(release.optString("body"))
-            val assets = release.optJSONArray("assets") ?: return@withContext null
-            val apkUrl = (0 until assets.length())
-                .mapNotNull(assets::optJSONObject)
-                .firstOrNull { it.optString("name").endsWith(".apk", ignoreCase = true) }
-                ?.optString("browser_download_url")
-                .orEmpty()
-            if (version.isBlank() || apkUrl.isBlank()) {
-                null
-            } else {
-                ReleaseUpdate(
-                    version = version,
-                    apkUrl = apkUrl,
-                    releaseNotes = releaseNotes,
-                )
-            }
+            parseLatestReleaseFeed(connection.inputStream.bufferedReader().use { it.readText() })
         } finally {
             connection.disconnect()
         }
@@ -207,6 +194,10 @@ class AppUpdateManager(context: Context) {
 
     private fun savedDownloadId() = preferences.getLong(KEY_DOWNLOAD_ID, -1L)
     private fun savedDownloadVersion() = preferences.getString(KEY_DOWNLOAD_VERSION, "").orEmpty()
+    private fun wasCheckedRecently(): Boolean {
+        val lastCheckedAt = preferences.getLong(KEY_LAST_CHECKED_AT, 0L)
+        return lastCheckedAt > 0L && System.currentTimeMillis() - lastCheckedAt < AUTO_CHECK_INTERVAL_MS
+    }
 
     private fun clearSavedDownload(removeDownload: Boolean = false) {
         val id = savedDownloadId()
@@ -218,11 +209,40 @@ class AppUpdateManager(context: Context) {
     }
 
     companion object {
-        private const val LATEST_RELEASE_URL = "https://api.github.com/repos/zxm965/CullPear-Native/releases/latest"
+        private const val RELEASES_FEED_URL = "https://github.com/zxm965/CullPear-Native/releases.atom"
+        private const val RELEASE_DOWNLOAD_ROOT = "https://github.com/zxm965/CullPear-Native/releases/download"
         private const val APK_MIME_TYPE = "application/vnd.android.package-archive"
         private const val PREFERENCES_NAME = "app_updates"
         private const val KEY_DOWNLOAD_ID = "download_id"
         private const val KEY_DOWNLOAD_VERSION = "download_version"
+        private const val KEY_LAST_CHECKED_AT = "last_checked_at"
+        private const val AUTO_CHECK_INTERVAL_MS = 6 * 60 * 60 * 1_000L
+
+        fun parseLatestReleaseFeed(feed: String): ReleaseUpdate? = ENTRY_REGEX.findAll(feed)
+            .mapNotNull { match ->
+                val entry = match.value
+                val version = RELEASE_VERSION_REGEX.find(entry)?.groupValues?.getOrNull(1).orEmpty()
+                if (version.isBlank() || '-' in version) return@mapNotNull null
+                val encodedContent = RELEASE_CONTENT_REGEX.find(entry)?.groupValues?.getOrNull(1).orEmpty()
+                ReleaseUpdate(
+                    version = version,
+                    apkUrl = "$RELEASE_DOWNLOAD_ROOT/v$version/CullPear-$version.apk",
+                    releaseNotes = formatReleaseNotes(atomHtmlToPlainText(encodedContent)),
+                )
+            }
+            .firstOrNull()
+
+        private fun atomHtmlToPlainText(encodedHtml: String): String = encodedHtml
+            .replace("&lt;", "<")
+            .replace("&gt;", ">")
+            .replace("&quot;", "\"")
+            .replace("&#39;", "'")
+            .replace("&amp;", "&")
+            .replace(Regex("(?i)<br\\s*/?>"), "\n")
+            .replace(Regex("(?i)</(?:p|li|h[1-6])>"), "\n")
+            .replace(Regex("(?i)<li[^>]*>"), "- ")
+            .replace(Regex("<[^>]+>"), "")
+            .trim()
 
         fun formatReleaseNotes(markdown: String): String {
             val notes = markdown.lineSequence()
@@ -260,5 +280,11 @@ class AppUpdateManager(context: Context) {
         }
 
         private const val MAX_RELEASE_NOTE_LINES = 8
+        private val ENTRY_REGEX = Regex("<entry\\b.*?</entry>", RegexOption.DOT_MATCHES_ALL)
+        private val RELEASE_VERSION_REGEX = Regex("<id>[^<]*/v([^<]+)</id>")
+        private val RELEASE_CONTENT_REGEX = Regex(
+            "<content\\b[^>]*>(.*?)</content>",
+            RegexOption.DOT_MATCHES_ALL,
+        )
     }
 }
