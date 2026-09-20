@@ -100,7 +100,10 @@ jobs:
           mkdir -p dist
           cp "$apk" "dist/CullPear-${VERSION_NAME}.apk"
           cp "$aab" "dist/CullPear-${VERSION_NAME}.aab"
-          sha256sum dist/*.apk dist/*.aab > "dist/CullPear-${VERSION_NAME}-checksums.txt"
+          (
+            cd dist
+            sha256sum *.apk *.aab > "CullPear-${VERSION_NAME}-checksums.txt"
+          )
 
       - name: Upload signed artifacts
         uses: actions/upload-artifact@v7
