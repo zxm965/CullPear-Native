@@ -69,6 +69,7 @@ fun SettingsRoute(preferences: ThemePreferences, updateManager: AppUpdateManager
                 InfoRow("当前版本", BuildConfig.VERSION_NAME)
                 Text(updateStateLabel(updateManager.state), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 when (updateManager.state) {
+                    UpdateState.Disabled -> Unit
                     is UpdateState.Available -> {
                         OutlinedButton(onClick = updateManager::downloadAvailableUpdate) { Text("下载更新") }
                     }
@@ -91,6 +92,7 @@ fun SettingsRoute(preferences: ThemePreferences, updateManager: AppUpdateManager
 }
 
 private fun updateStateLabel(state: UpdateState): String = when (state) {
+    UpdateState.Disabled -> "开发版本不检查应用更新。"
     UpdateState.Idle -> "启动后会自动检查更新。"
     UpdateState.Checking -> "正在检查更新…"
     is UpdateState.UpToDate -> "已是最新版本 ${state.version}。"

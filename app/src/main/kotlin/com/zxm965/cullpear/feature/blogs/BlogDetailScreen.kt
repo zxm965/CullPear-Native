@@ -20,6 +20,7 @@ import com.zxm965.cullpear.ui.components.ContentCard
 import com.zxm965.cullpear.ui.components.ContentList
 import com.zxm965.cullpear.ui.components.DetailBody
 import com.zxm965.cullpear.ui.components.RemoteImage
+import com.zxm965.cullpear.ui.components.ScreenLoadingSkeleton
 import com.zxm965.cullpear.ui.components.Section
 import com.zxm965.cullpear.ui.components.StatefulScreen
 import com.zxm965.cullpear.ui.components.TagRow
@@ -36,7 +37,18 @@ class BlogDetailViewModel(private val repository: ContentRepository, private val
 @Composable
 fun BlogDetailRoute(repository: ContentRepository, slug: String) {
     val model: BlogDetailViewModel = viewModel(key = "blog-$slug", factory = BlogDetailViewModel.Factory(repository, slug))
-    StatefulScreen(model.state.value, model::refresh) { post ->
+    StatefulScreen(
+        state = model.state.value,
+        onRetry = model::refresh,
+        isRefreshing = model.isRefreshing.value,
+        loading = {
+            ScreenLoadingSkeleton(
+                imageHeight = 230.dp,
+                showPageHeader = false,
+                showSectionTitle = false,
+            )
+        },
+    ) { post ->
         if (post == null) {
             Text("暂时没有找到这篇文章。")
             return@StatefulScreen

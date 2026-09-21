@@ -22,6 +22,7 @@ import com.zxm965.cullpear.ui.components.ContentCard
 import com.zxm965.cullpear.ui.components.ContentList
 import com.zxm965.cullpear.ui.components.PageHeader
 import com.zxm965.cullpear.ui.components.RemoteImage
+import com.zxm965.cullpear.ui.components.ScreenLoadingSkeleton
 import com.zxm965.cullpear.ui.components.StatefulScreen
 import com.zxm965.cullpear.ui.components.TagRow
 
@@ -37,7 +38,12 @@ class BlogsViewModel(private val repository: ContentRepository) : LoadingViewMod
 @Composable
 fun BlogsRoute(repository: ContentRepository, onPost: (String) -> Unit) {
     val model: BlogsViewModel = viewModel(factory = BlogsViewModel.Factory(repository))
-    StatefulScreen(model.state.value, model::refresh) { posts ->
+    StatefulScreen(
+        state = model.state.value,
+        onRetry = model::refresh,
+        isRefreshing = model.isRefreshing.value,
+        loading = { ScreenLoadingSkeleton(imageHeight = 180.dp) },
+    ) { posts ->
         ContentList {
             item {
                 PageHeader(

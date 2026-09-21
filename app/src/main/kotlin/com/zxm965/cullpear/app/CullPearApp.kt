@@ -1,6 +1,7 @@
 package com.zxm965.cullpear.app
 
 import android.net.Uri
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.heightIn
@@ -9,6 +10,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
@@ -22,6 +25,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavType
@@ -31,6 +36,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.zxm965.cullpear.BuildConfig
+import com.zxm965.cullpear.R
 import com.zxm965.cullpear.core.update.UpdateState
 import com.zxm965.cullpear.feature.about.AboutRoute
 import com.zxm965.cullpear.feature.blogs.BlogDetailRoute
@@ -41,14 +47,19 @@ import com.zxm965.cullpear.feature.settings.SettingsRoute
 import com.zxm965.cullpear.feature.works.WorkDetailRoute
 import com.zxm965.cullpear.feature.works.WorksRoute
 
-private data class TabDestination(val route: String, val label: String, val symbol: String)
+private data class TabDestination(
+    val route: String,
+    val label: String,
+    @param:DrawableRes val icon: Int,
+    @param:DrawableRes val selectedIcon: Int,
+)
 
 private val tabs = listOf(
-    TabDestination("home", "首页", "⌂"),
-    TabDestination("works", "作品", "▣"),
-    TabDestination("about", "能力", "◇"),
-    TabDestination("blogs", "博客", "≡"),
-    TabDestination("contact", "联系", "✉"),
+    TabDestination("home", "首页", R.drawable.ms_rounded_home_24, R.drawable.ms_rounded_home_filled_24),
+    TabDestination("works", "作品", R.drawable.ms_rounded_work_24, R.drawable.ms_rounded_work_filled_24),
+    TabDestination("about", "能力", R.drawable.ms_rounded_psychology_24, R.drawable.ms_rounded_psychology_filled_24),
+    TabDestination("blogs", "博客", R.drawable.ms_rounded_article_24, R.drawable.ms_rounded_article_filled_24),
+    TabDestination("contact", "联系", R.drawable.ms_rounded_mail_24, R.drawable.ms_rounded_mail_filled_24),
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -69,8 +80,10 @@ fun CullPearApp(container: AppContainer) {
         else -> "拾梨"
     }
 
-    LaunchedEffect(Unit) {
-        container.updateManager.checkForUpdate()
+    if (!BuildConfig.DEBUG) {
+        LaunchedEffect(Unit) {
+            container.updateManager.checkForUpdate()
+        }
     }
 
     Scaffold(
@@ -79,11 +92,23 @@ fun CullPearApp(container: AppContainer) {
                 title = { Text(title) },
                 navigationIcon = {
                     if (isSettings || isDetail) {
-                        TextButton(onClick = { navController.popBackStack() }) { Text("‹ 返回") }
+                        IconButton(onClick = { navController.popBackStack() }) {
+                            Icon(
+                                painter = painterResource(R.drawable.ms_rounded_arrow_back_24),
+                                contentDescription = stringResource(R.string.back),
+                            )
+                        }
                     }
                 },
                 actions = {
-                    if (!isSettings) TextButton(onClick = { navController.navigate("settings") }) { Text("设置") }
+                    if (!isSettings) {
+                        IconButton(onClick = { navController.navigate("settings") }) {
+                            Icon(
+                                painter = painterResource(R.drawable.ms_rounded_settings_24),
+                                contentDescription = stringResource(R.string.settings),
+                            )
+                        }
+                    }
                 },
             )
         },
@@ -102,7 +127,12 @@ fun CullPearApp(container: AppContainer) {
                                     restoreState = true
                                 }
                             },
-                            icon = { Text(tab.symbol) },
+                            icon = {
+                                Icon(
+                                    painter = painterResource(if (selected) tab.selectedIcon else tab.icon),
+                                    contentDescription = null,
+                                )
+                            },
                             label = { Text(tab.label) },
                         )
                     }

@@ -6,17 +6,22 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.zxm965.cullpear.core.data.ContentRepository
+import com.zxm965.cullpear.R
 import com.zxm965.cullpear.core.model.HomeContent
 import com.zxm965.cullpear.core.model.Project
 import com.zxm965.cullpear.core.ui.LoadingViewModel
@@ -25,6 +30,7 @@ import com.zxm965.cullpear.ui.components.ContentList
 import com.zxm965.cullpear.ui.components.ExternalLinkButton
 import com.zxm965.cullpear.ui.components.RemoteImage
 import com.zxm965.cullpear.ui.components.Section
+import com.zxm965.cullpear.ui.components.ScreenLoadingSkeleton
 import com.zxm965.cullpear.ui.components.StatefulScreen
 import com.zxm965.cullpear.ui.components.TagRow
 
@@ -41,7 +47,18 @@ class HomeViewModel(private val repository: ContentRepository) : LoadingViewMode
 @Composable
 fun HomeRoute(repository: ContentRepository, onProject: (String) -> Unit) {
     val model: HomeViewModel = viewModel(factory = HomeViewModel.Factory(repository))
-    StatefulScreen(model.state.value, model::refresh) { HomeScreen(it, onProject) }
+    StatefulScreen(
+        state = model.state.value,
+        onRetry = model::refresh,
+        isRefreshing = model.isRefreshing.value,
+        loading = {
+            ScreenLoadingSkeleton(
+                imageHeight = 185.dp,
+                showPageHeader = false,
+                showLeadCard = true,
+            )
+        },
+    ) { HomeScreen(it, onProject) }
 }
 
 @Composable
@@ -55,7 +72,18 @@ private fun HomeScreen(content: HomeContent, onProject: (String) -> Unit) {
                 Text(profile.summary, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 TagRow(listOf(profile.name, profile.location).filter(String::isNotBlank))
                 if (profile.availability.isNotBlank()) {
-                    Text("● ${profile.availability}", color = MaterialTheme.colorScheme.secondary)
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ms_rounded_circle_filled_24),
+                            contentDescription = null,
+                            modifier = Modifier.size(10.dp),
+                            tint = MaterialTheme.colorScheme.secondary,
+                        )
+                        Text(profile.availability, color = MaterialTheme.colorScheme.secondary)
+                    }
                 }
             }
         }

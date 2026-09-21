@@ -23,6 +23,7 @@ import com.zxm965.cullpear.ui.components.ContentCard
 import com.zxm965.cullpear.ui.components.ContentList
 import com.zxm965.cullpear.ui.components.PageHeader
 import com.zxm965.cullpear.ui.components.RemoteImage
+import com.zxm965.cullpear.ui.components.ScreenLoadingSkeleton
 import com.zxm965.cullpear.ui.components.StatefulScreen
 import com.zxm965.cullpear.ui.components.TagRow
 
@@ -38,7 +39,12 @@ class WorksViewModel(private val repository: ContentRepository) : LoadingViewMod
 @Composable
 fun WorksRoute(repository: ContentRepository, onProject: (String) -> Unit) {
     val model: WorksViewModel = viewModel(factory = WorksViewModel.Factory(repository))
-    StatefulScreen(model.state.value, model::refresh) { projects ->
+    StatefulScreen(
+        state = model.state.value,
+        onRetry = model::refresh,
+        isRefreshing = model.isRefreshing.value,
+        loading = { ScreenLoadingSkeleton(imageHeight = 190.dp) },
+    ) { projects ->
         ContentList {
             item {
                 PageHeader(

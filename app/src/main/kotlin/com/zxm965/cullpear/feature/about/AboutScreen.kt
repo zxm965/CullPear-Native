@@ -2,14 +2,21 @@ package com.zxm965.cullpear.feature.about
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.zxm965.cullpear.core.data.ContentRepository
+import com.zxm965.cullpear.R
 import com.zxm965.cullpear.ui.components.ContentCard
 import com.zxm965.cullpear.ui.components.ContentList
 import com.zxm965.cullpear.ui.components.PageHeader
@@ -42,7 +49,20 @@ fun AboutRoute(repository: ContentRepository) {
                 Text(step.title, fontWeight = FontWeight.Bold)
                 Text(step.description, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    step.checkpoints.forEach { Text("✓ $it", color = MaterialTheme.colorScheme.secondary) }
+                    step.checkpoints.forEach { checkpoint ->
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.ms_rounded_check_circle_24),
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                                tint = MaterialTheme.colorScheme.secondary,
+                            )
+                            Text(checkpoint, color = MaterialTheme.colorScheme.secondary)
+                        }
+                    }
                 }
             }
         }

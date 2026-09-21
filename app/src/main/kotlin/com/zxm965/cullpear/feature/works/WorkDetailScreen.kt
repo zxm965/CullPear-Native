@@ -23,6 +23,7 @@ import com.zxm965.cullpear.ui.components.DetailBody
 import com.zxm965.cullpear.ui.components.ExternalLinkButton
 import com.zxm965.cullpear.ui.components.InfoRow
 import com.zxm965.cullpear.ui.components.RemoteImage
+import com.zxm965.cullpear.ui.components.ScreenLoadingSkeleton
 import com.zxm965.cullpear.ui.components.Section
 import com.zxm965.cullpear.ui.components.StatefulScreen
 import com.zxm965.cullpear.ui.components.TagRow
@@ -39,7 +40,18 @@ class WorkDetailViewModel(private val repository: ContentRepository, private val
 @Composable
 fun WorkDetailRoute(repository: ContentRepository, slug: String) {
     val model: WorkDetailViewModel = viewModel(key = "work-$slug", factory = WorkDetailViewModel.Factory(repository, slug))
-    StatefulScreen(model.state.value, model::refresh) { project ->
+    StatefulScreen(
+        state = model.state.value,
+        onRetry = model::refresh,
+        isRefreshing = model.isRefreshing.value,
+        loading = {
+            ScreenLoadingSkeleton(
+                imageHeight = 230.dp,
+                showPageHeader = false,
+                showSectionTitle = false,
+            )
+        },
+    ) { project ->
         if (project == null) {
             Text("暂时没有找到这个作品。")
             return@StatefulScreen

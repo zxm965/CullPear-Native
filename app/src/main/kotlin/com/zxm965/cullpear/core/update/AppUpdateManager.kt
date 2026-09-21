@@ -20,6 +20,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 sealed interface UpdateState {
+    data object Disabled : UpdateState
     data object Idle : UpdateState
     data object Checking : UpdateState
     data class UpToDate(val version: String) : UpdateState
@@ -41,7 +42,9 @@ class AppUpdateManager(context: Context) {
     private val downloadManager = appContext.getSystemService(DownloadManager::class.java)
     private val preferences = appContext.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
 
-    var state by mutableStateOf<UpdateState>(UpdateState.Idle)
+    var state by mutableStateOf<UpdateState>(
+        if (BuildConfig.DEBUG) UpdateState.Disabled else UpdateState.Idle,
+    )
         private set
 
     private val downloadReceiver = object : BroadcastReceiver() {
@@ -53,16 +56,22 @@ class AppUpdateManager(context: Context) {
     }
 
     init {
-        ContextCompat.registerReceiver(
-            appContext,
-            downloadReceiver,
-            IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE),
-            ContextCompat.RECEIVER_EXPORTED,
-        )
-        restoreDownloadState()
+        if (!BuildConfig.DEBUG) {
+            ContextCompat.registerReceiver(
+                appContext,
+                downloadReceiver,
+                IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE),
+                ContextCompat.RECEIVER_EXPORTED,
+            )
+            restoreDownloadState()
+        }
     }
 
     suspend fun checkForUpdate(force: Boolean = false) {
+        if (BuildConfig.DEBUG) {
+            state = UpdateState.Disabled
+            return
+        }
         if (!force && wasCheckedRecently()) {
             if (!restoreDownloadState()) state = UpdateState.UpToDate(BuildConfig.VERSION_NAME)
             return

@@ -18,6 +18,7 @@ import com.zxm965.cullpear.ui.components.ContentList
 import com.zxm965.cullpear.ui.components.ExternalLinkButton
 import com.zxm965.cullpear.ui.components.InfoRow
 import com.zxm965.cullpear.ui.components.PageHeader
+import com.zxm965.cullpear.ui.components.ScreenLoadingSkeleton
 import com.zxm965.cullpear.ui.components.StatefulScreen
 
 class ContactViewModel(private val repository: ContentRepository) : LoadingViewModel<ContactContent>() {
@@ -32,7 +33,12 @@ class ContactViewModel(private val repository: ContentRepository) : LoadingViewM
 @Composable
 fun ContactRoute(repository: ContentRepository) {
     val model: ContactViewModel = viewModel(factory = ContactViewModel.Factory(repository))
-    StatefulScreen(model.state.value, model::refresh) { content ->
+    StatefulScreen(
+        state = model.state.value,
+        onRetry = model::refresh,
+        isRefreshing = model.isRefreshing.value,
+        loading = { ScreenLoadingSkeleton() },
+    ) { content ->
         val contact = content.contact
         ContentList {
             item {
