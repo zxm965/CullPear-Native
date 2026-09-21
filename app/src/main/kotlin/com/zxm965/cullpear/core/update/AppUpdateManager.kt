@@ -37,6 +37,14 @@ data class ReleaseUpdate(
     val releaseNotes: String,
 )
 
+class UpdateCleanupReceiver : BroadcastReceiver() {
+    override fun onReceive(context: Context, intent: Intent) {
+        if (intent.action == Intent.ACTION_MY_PACKAGE_REPLACED) {
+            AppUpdateManager.discardInstalledDownload(context)
+        }
+    }
+}
+
 class AppUpdateManager(context: Context) {
     private val appContext = context.applicationContext
     private val downloadManager = appContext.getSystemService(DownloadManager::class.java)
@@ -175,7 +183,12 @@ class AppUpdateManager(context: Context) {
     private fun restoreDownloadState(expectedVersion: String? = null): Boolean {
         val id = savedDownloadId()
         val version = savedDownloadVersion()
-        if (id < 0 || version.isBlank() || (expectedVersion != null && version != expectedVersion)) return false
+        if (id < 0 || version.isBlank()) return false
+        if (shouldDiscardDownloadedUpdate(version, BuildConfig.VERSION_NAME)) {
+            discardInstalledDownload(appContext)
+            return false
+        }
+        if (expectedVersion != null && version != expectedVersion) return false
         val cursor = downloadManager.query(DownloadManager.Query().setFilterById(id)) ?: return false
         cursor.use {
             if (!it.moveToFirst()) return false
@@ -286,6 +299,26 @@ class AppUpdateManager(context: Context) {
                 if (comparison != 0) return comparison
             }
             return 0
+        }
+
+        fun shouldDiscardDownloadedUpdate(downloadedVersion: String, currentVersion: String): Boolean =
+            downloadedVersion.isNotBlank() && compareVersions(downloadedVersion, currentVersion) <= 0
+
+        internal fun discardInstalledDownload(context: Context): Boolean {
+            val appContext = context.applicationContext
+            val preferences = appContext.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
+            val downloadedVersion = preferences.getString(KEY_DOWNLOAD_VERSION, "").orEmpty()
+            if (!shouldDiscardDownloadedUpdate(downloadedVersion, BuildConfig.VERSION_NAME)) return false
+
+            val downloadId = preferences.getLong(KEY_DOWNLOAD_ID, -1L)
+            if (downloadId >= 0) {
+                appContext.getSystemService(DownloadManager::class.java).remove(downloadId)
+            }
+            preferences.edit {
+                remove(KEY_DOWNLOAD_ID)
+                remove(KEY_DOWNLOAD_VERSION)
+            }
+            return true
         }
 
         private const val MAX_RELEASE_NOTE_LINES = 8

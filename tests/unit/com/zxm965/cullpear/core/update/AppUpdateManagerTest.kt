@@ -17,6 +17,14 @@ class AppUpdateManagerTest {
     }
 
     @Test
+    fun discardsDownloadedUpdateAlreadyInstalled() {
+        assertEquals(true, AppUpdateManager.shouldDiscardDownloadedUpdate("1.1.2", "1.1.2"))
+        assertEquals(true, AppUpdateManager.shouldDiscardDownloadedUpdate("1.1.1", "1.1.2"))
+        assertEquals(false, AppUpdateManager.shouldDiscardDownloadedUpdate("1.1.3", "1.1.2"))
+        assertEquals(false, AppUpdateManager.shouldDiscardDownloadedUpdate("", "1.1.2"))
+    }
+
+    @Test
     fun formatsGitHubReleaseNotesForDialog() {
         val markdown = """
             ## What's Changed
